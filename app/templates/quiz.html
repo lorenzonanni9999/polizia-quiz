@@ -4,7 +4,14 @@
 
 <div class="quiz-header">
   <div>Domande: <strong>{{ attempt['total_questions'] }}</strong> &middot; Risposte date: <strong id="answered-count">0</strong>/{{ attempt['total_questions'] }}</div>
-  <div class="timer" id="timer">90:00</div>
+  <div class="quiz-header-right">
+    <div class="quiz-controls">
+      <button type="button" id="pause-toggle-btn" class="btn btn-ghost btn-small">Pausa tempo</button>
+      <button type="submit" form="quiz-form" formaction="{{ url_for('quiz.save_and_exit', attempt_id=attempt['id']) }}"
+              formnovalidate class="btn btn-ghost btn-small" id="save-exit-btn">Salva ed esci</button>
+    </div>
+    <div class="timer" id="timer">90:00</div>
+  </div>
 </div>
 
 <form method="post" action="{{ url_for('quiz.submit_attempt', attempt_id=attempt['id']) }}" id="quiz-form">
@@ -17,7 +24,7 @@
       <div class="options">
         {% for opt in item.options %}
         <label class="option">
-          <input type="radio" name="answer_{{ item.position }}" value="{{ loop.index0 }}">
+          <input type="radio" name="answer_{{ item.position }}" value="{{ loop.index0 }}" {{ 'checked' if item.selected_position == loop.index0 }}>
           <span>{{ opt }}</span>
         </label>
         {% endfor %}
@@ -34,10 +41,14 @@
 
 <script>
 let remaining = {{ remaining_seconds }};
+let paused = false;
 const timerEl = document.getElementById('timer');
 const form = document.getElementById('quiz-form');
 const answeredEl = document.getElementById('answered-count');
 const totalQuestions = {{ attempt['total_questions'] }};
+const pauseToggleBtn = document.getElementById('pause-toggle-btn');
+const pauseUrl = "{{ url_for('quiz.pause_attempt', attempt_id=attempt['id']) }}";
+const resumeUrl = "{{ url_for('quiz.resume_attempt', attempt_id=attempt['id']) }}";
 
 function formatTime(s) {
   s = Math.max(0, s);
@@ -47,6 +58,7 @@ function formatTime(s) {
 }
 
 function tick() {
+  if (paused) return;
   timerEl.textContent = formatTime(remaining);
   if (remaining <= 300) {
     timerEl.classList.add('timer-warning');
@@ -69,8 +81,37 @@ function updateAnsweredCount() {
   answeredEl.textContent = Object.keys(groups).length;
 }
 form.addEventListener('change', updateAnsweredCount);
+updateAnsweredCount();
+
+pauseToggleBtn.addEventListener('click', async function () {
+  pauseToggleBtn.disabled = true;
+  try {
+    if (!paused) {
+      const fd = new FormData(form);
+      await fetch(pauseUrl, { method: 'POST', body: fd });
+      paused = true;
+      pauseToggleBtn.textContent = 'Riprendi';
+      timerEl.classList.add('timer-paused');
+      form.querySelectorAll('input[type=radio]').forEach(r => { r.disabled = true; });
+    } else {
+      const resp = await fetch(resumeUrl, { method: 'POST' });
+      const data = await resp.json();
+      remaining = data.remaining_seconds;
+      paused = false;
+      pauseToggleBtn.textContent = 'Pausa tempo';
+      timerEl.classList.remove('timer-paused');
+      form.querySelectorAll('input[type=radio]').forEach(r => { r.disabled = false; });
+      tick();
+    }
+  } finally {
+    pauseToggleBtn.disabled = false;
+  }
+});
 
 form.addEventListener('submit', function (e) {
+  if (e.submitter && e.submitter.id === 'save-exit-btn') {
+    return;
+  }
   const groups = {};
   form.querySelectorAll('input[type=radio]:checked').forEach(el => { groups[el.name] = true; });
   const unanswered = totalQuestions - Object.keys(groups).length;

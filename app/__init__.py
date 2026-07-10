@@ -39,10 +39,11 @@ def create_app():
     db_module.register_db(app)
     db_module.init_db(app, qmod.get_subjects())
 
-    from . import auth, dashboard, quiz, practice
+    from . import auth, dashboard, quiz, practice, admin
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
     app.register_blueprint(quiz.bp)
     app.register_blueprint(practice.bp)
+    app.register_blueprint(admin.bp)
 
     return app

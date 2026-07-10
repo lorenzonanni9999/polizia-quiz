@@ -6,6 +6,8 @@ from werkzeug.security import generate_password_hash
 
 DEFAULT_USERNAME = "dgps"
 DEFAULT_PASSWORD = "forzaalessia"
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "admin"
 DEFAULT_QUOTA_PER_SUBJECT = 10
 QUIZ_DURATION_SECONDS = 90 * 60
 
@@ -13,7 +15,8 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL
+    password_hash TEXT NOT NULL,
+    is_admin INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS subject_quota (
@@ -30,6 +33,8 @@ CREATE TABLE IF NOT EXISTS attempts (
     status TEXT NOT NULL DEFAULT 'in_progress',
     total_questions INTEGER NOT NULL,
     correct_count INTEGER,
+    paused_at TEXT,
+    paused_seconds INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
@@ -66,14 +71,29 @@ def close_db(_exc=None):
         db.close()
 
 
+def _ensure_column(conn, table, column, coldef):
+    cols = [row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+    if column not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coldef}")
+
+
 def init_db(app, subjects):
     Path(app.config["DATABASE_PATH"]).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(app.config["DATABASE_PATH"])
     conn.executescript(SCHEMA)
 
+    # migrations for databases created before these columns existed
+    _ensure_column(conn, "users", "is_admin", "INTEGER NOT NULL DEFAULT 0")
+    _ensure_column(conn, "attempts", "paused_at", "TEXT")
+    _ensure_column(conn, "attempts", "paused_seconds", "INTEGER NOT NULL DEFAULT 0")
+
     conn.execute(
-        "INSERT OR IGNORE INTO users (username, password_hash) VALUES (?, ?)",
+        "INSERT OR IGNORE INTO users (username, password_hash, is_admin) VALUES (?, ?, 0)",
         (DEFAULT_USERNAME, generate_password_hash(DEFAULT_PASSWORD)),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO users (username, password_hash, is_admin) VALUES (?, ?, 1)",
+        (ADMIN_USERNAME, generate_password_hash(ADMIN_PASSWORD)),
     )
 
     for subject in subjects:

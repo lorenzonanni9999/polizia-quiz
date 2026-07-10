@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 
-from flask import Blueprint, abort, g, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
 
 from .auth import login_required
 from .db import get_db, QUIZ_DURATION_SECONDS
@@ -25,6 +25,62 @@ def _get_owned_attempt(db, attempt_id):
     if attempt is None or attempt["user_id"] != g.user["id"]:
         abort(404)
     return attempt
+
+
+def _effective_elapsed(attempt, now=None):
+    """Seconds actually counted against the timer, excluding any paused time."""
+    now = now or datetime.now(timezone.utc)
+    started = _parse_iso(attempt["started_at"])
+    total_paused = attempt["paused_seconds"] or 0
+    if attempt["paused_at"]:
+        total_paused += (now - _parse_iso(attempt["paused_at"])).total_seconds()
+    return max(0.0, (now - started).total_seconds() - total_paused)
+
+
+def _remaining_seconds(attempt, now=None):
+    return attempt["duration_seconds"] - _effective_elapsed(attempt, now=now)
+
+
+def _resume_if_paused(db, attempt):
+    """If the attempt is currently paused, fold the paused duration into
+    paused_seconds and clear paused_at. Returns a fresh copy of the row."""
+    if attempt["paused_at"]:
+        delta = (datetime.now(timezone.utc) - _parse_iso(attempt["paused_at"])).total_seconds()
+        new_total = int((attempt["paused_seconds"] or 0) + delta)
+        db.execute(
+            "UPDATE attempts SET paused_at = NULL, paused_seconds = ? WHERE id = ?",
+            (new_total, attempt["id"]),
+        )
+        db.commit()
+        return _get_owned_attempt(db, attempt["id"])
+    return attempt
+
+
+def _pause_now(db, attempt):
+    if not attempt["paused_at"]:
+        db.execute(
+            "UPDATE attempts SET paused_at = ? WHERE id = ?",
+            (_now_iso(), attempt["id"]),
+        )
+        db.commit()
+
+
+def _save_answers_from_form(db, attempt_id, form):
+    answer_rows = db.execute(
+        "SELECT * FROM attempt_answers WHERE attempt_id = ?", (attempt_id,)
+    ).fetchall()
+    for row in answer_rows:
+        raw = form.get(f"answer_{row['position']}")
+        selected_position = int(raw) if raw not in (None, "") else None
+        is_correct = None
+        if selected_position is not None:
+            order = json.loads(row["option_order"])
+            is_correct = 1 if order[selected_position] == 0 else 0
+        db.execute(
+            "UPDATE attempt_answers SET selected_position = ?, is_correct = ? WHERE id = ?",
+            (selected_position, is_correct, row["id"]),
+        )
+    db.commit()
 
 
 def _grade_and_close(db, attempt, status):
@@ -83,8 +139,10 @@ def view_attempt(attempt_id):
     if attempt["status"] != "in_progress":
         return redirect(url_for("quiz.results", attempt_id=attempt_id))
 
-    elapsed = (datetime.now(timezone.utc) - _parse_iso(attempt["started_at"])).total_seconds()
-    remaining = attempt["duration_seconds"] - elapsed
+    # coming back to the page always resumes the clock
+    attempt = _resume_if_paused(db, attempt)
+
+    remaining = _remaining_seconds(attempt)
     if remaining <= 0:
         _grade_and_close(db, attempt, "expired")
         return redirect(url_for("quiz.results", attempt_id=attempt_id))
@@ -104,6 +162,7 @@ def view_attempt(attempt_id):
             "subject": row["subject"],
             "question": q["question"],
             "options": display_options,
+            "selected_position": row["selected_position"],
         })
 
     subjects_in_order = []
@@ -123,6 +182,46 @@ def view_attempt(attempt_id):
     )
 
 
+@bp.route("/<int:attempt_id>/pause", methods=("POST",))
+@login_required
+def pause_attempt(attempt_id):
+    db = get_db()
+    attempt = _get_owned_attempt(db, attempt_id)
+    if attempt["status"] != "in_progress":
+        return jsonify({"error": "not in progress"}), 400
+
+    _save_answers_from_form(db, attempt_id, request.form)
+    _pause_now(db, attempt)
+    return jsonify({"status": "paused"})
+
+
+@bp.route("/<int:attempt_id>/resume", methods=("POST",))
+@login_required
+def resume_attempt(attempt_id):
+    db = get_db()
+    attempt = _get_owned_attempt(db, attempt_id)
+    if attempt["status"] != "in_progress":
+        return jsonify({"error": "not in progress"}), 400
+
+    attempt = _resume_if_paused(db, attempt)
+    remaining = max(0, int(_remaining_seconds(attempt)))
+    return jsonify({"remaining_seconds": remaining})
+
+
+@bp.route("/<int:attempt_id>/save_and_exit", methods=("POST",))
+@login_required
+def save_and_exit(attempt_id):
+    db = get_db()
+    attempt = _get_owned_attempt(db, attempt_id)
+    if attempt["status"] != "in_progress":
+        return redirect(url_for("quiz.results", attempt_id=attempt_id))
+
+    _save_answers_from_form(db, attempt_id, request.form)
+    _pause_now(db, attempt)
+    flash("Simulazione salvata e messa in pausa: la trovi tra quelle \"in corso\" nella dashboard.")
+    return redirect(url_for("dashboard.home"))
+
+
 @bp.route("/<int:attempt_id>/submit", methods=("POST",))
 @login_required
 def submit_attempt(attempt_id):
@@ -132,27 +231,10 @@ def submit_attempt(attempt_id):
     if attempt["status"] != "in_progress":
         return redirect(url_for("quiz.results", attempt_id=attempt_id))
 
-    elapsed = (datetime.now(timezone.utc) - _parse_iso(attempt["started_at"])).total_seconds()
+    elapsed = _effective_elapsed(attempt)
     status = "expired" if elapsed > attempt["duration_seconds"] + 5 else "completed"
 
-    answer_rows = db.execute(
-        "SELECT * FROM attempt_answers WHERE attempt_id = ?", (attempt_id,)
-    ).fetchall()
-
-    for row in answer_rows:
-        field = f"answer_{row['position']}"
-        raw = request.form.get(field)
-        selected_position = int(raw) if raw is not None and raw != "" else None
-        is_correct = None
-        if selected_position is not None:
-            order = json.loads(row["option_order"])
-            is_correct = 1 if order[selected_position] == 0 else 0
-        db.execute(
-            "UPDATE attempt_answers SET selected_position = ?, is_correct = ? WHERE id = ?",
-            (selected_position, is_correct, row["id"]),
-        )
-    db.commit()
-
+    _save_answers_from_form(db, attempt_id, request.form)
     _grade_and_close(db, attempt, status)
     return redirect(url_for("quiz.results", attempt_id=attempt_id))
 

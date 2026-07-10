@@ -14,6 +14,9 @@
     <a href="{{ url_for('dashboard.home') }}">Dashboard</a>
     <a href="{{ url_for('practice.form') }}">Allenamento</a>
     <a href="{{ url_for('dashboard.settings') }}">Impostazioni</a>
+    {% if g.user['is_admin'] %}
+    <a href="{{ url_for('admin.home') }}">Admin</a>
+    {% endif %}
     <a href="{{ url_for('auth.account') }}">Account</a>
     <a href="{{ url_for('auth.logout') }}">Esci</a>
   </nav>

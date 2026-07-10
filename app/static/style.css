@@ -271,6 +271,17 @@ h2 { font-size: 1.15rem; margin: 0 0 14px; color: var(--ink-900); }
   box-shadow: var(--shadow-md);
 }
 
+.quiz-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.quiz-controls {
+  display: flex;
+  gap: 8px;
+}
+
 .timer {
   font-size: 1.35rem;
   font-weight: 700;
@@ -279,6 +290,7 @@ h2 { font-size: 1.15rem; margin: 0 0 14px; color: var(--ink-900); }
   transition: color 0.2s ease;
 }
 .timer-warning { color: var(--red); }
+.timer-paused { color: var(--muted); }
 
 .subject-heading {
   color: var(--blue);
@@ -345,6 +357,8 @@ h2 { font-size: 1.15rem; margin: 0 0 14px; color: var(--ink-900); }
 }
 .tag-correct { background: var(--green); color: #fff; }
 .tag-wrong { background: var(--red); color: #fff; }
+.tag-admin { background: var(--ink-900); color: #fff; }
+.tag-paused { background: #f0ad4e; color: #fff; }
 
 @media (max-width: 600px) {
   .quiz-header { flex-direction: column; align-items: flex-start; gap: 6px; top: 0; }

@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from .db import get_db
@@ -24,6 +24,17 @@ def login_required(view):
     def wrapped(*args, **kwargs):
         if g.user is None:
             return redirect(url_for("auth.login", next=request.path))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def admin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if g.user is None:
+            return redirect(url_for("auth.login", next=request.path))
+        if not g.user["is_admin"]:
+            abort(403)
         return view(*args, **kwargs)
     return wrapped
 

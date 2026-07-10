@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Amministrazione{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h1>Utenti</h1>
+  <table class="table">
+    <thead>
+      <tr><th>Utente</th><th>Simulazioni completate</th><th>Media punteggio</th><th>Ultima attività</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for u in user_rows %}
+      <tr>
+        <td>{{ u.username }}{% if u.is_admin %} <span class="tag tag-admin">admin</span>{% endif %}</td>
+        <td>{{ u.completed_attempts }}</td>
+        <td>{{ (u.avg_score ~ '%') if u.avg_score is not none else '—' }}</td>
+        <td>{{ u.last_activity[:16].replace('T', ' ') if u.last_activity else '—' }}</td>
+        <td><a class="btn btn-small" href="{{ url_for('admin.user_detail', user_id=u.id) }}">Dettagli</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Crea nuovo utente</h2>
+  <form method="post" action="{{ url_for('admin.new_user') }}" class="practice-form">
+    <label>Nome utente
+      <input type="text" name="username" required>
+    </label>
+    <label>Password
+      <input type="text" name="password" required minlength="4">
+    </label>
+    <button type="submit" class="btn btn-primary">Crea utente</button>
+  </form>
+</div>
+
+{% endblock %}
