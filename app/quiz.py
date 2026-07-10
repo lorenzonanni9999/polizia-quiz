@@ -70,7 +70,12 @@ def _save_answers_from_form(db, attempt_id, form):
         "SELECT * FROM attempt_answers WHERE attempt_id = ?", (attempt_id,)
     ).fetchall()
     for row in answer_rows:
-        raw = form.get(f"answer_{row['position']}")
+        field = f"answer_{row['position']}"
+        if field not in form:
+            # radio not submitted (e.g. disabled while paused) - leave any
+            # previously saved answer untouched instead of wiping it
+            continue
+        raw = form.get(field)
         selected_position = int(raw) if raw not in (None, "") else None
         is_correct = None
         if selected_position is not None:
