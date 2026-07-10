@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
 
 from .auth import login_required
-from .db import get_db, QUIZ_DURATION_SECONDS
+from .db import get_db, QUIZ_DURATION_SECONDS, CORRECT_POINTS, WRONG_POINTS, PASS_THRESHOLD
 from . import questions as qmod
 
 bp = Blueprint("quiz", __name__, url_prefix="/quiz")
@@ -88,19 +88,28 @@ def _grade_and_close(db, attempt, status):
         "SELECT * FROM attempt_answers WHERE attempt_id = ?", (attempt["id"],)
     ).fetchall()
     correct_count = sum(1 for a in answers if a["is_correct"] == 1)
+
+    weighted_score = None
+    if attempt["mode"] == "full":
+        wrong_count = sum(
+            1 for a in answers if a["selected_position"] is not None and a["is_correct"] == 0
+        )
+        weighted_score = round(correct_count * CORRECT_POINTS + wrong_count * WRONG_POINTS, 2)
+
     db.execute(
-        "UPDATE attempts SET status = ?, finished_at = ?, correct_count = ? WHERE id = ?",
-        (status, _now_iso(), correct_count, attempt["id"]),
+        """UPDATE attempts SET status = ?, finished_at = ?, correct_count = ?, weighted_score = ?
+           WHERE id = ?""",
+        (status, _now_iso(), correct_count, weighted_score, attempt["id"]),
     )
     db.commit()
 
 
-def create_attempt(db, user_id, selected, duration_seconds):
+def create_attempt(db, user_id, selected, duration_seconds, mode="practice"):
     """Persist a new attempt (and its question snapshot) and return its id."""
     cur = db.execute(
-        """INSERT INTO attempts (user_id, started_at, duration_seconds, status, total_questions)
-           VALUES (?, ?, ?, 'in_progress', ?)""",
-        (user_id, _now_iso(), duration_seconds, len(selected)),
+        """INSERT INTO attempts (user_id, started_at, duration_seconds, status, total_questions, mode)
+           VALUES (?, ?, ?, 'in_progress', ?, ?)""",
+        (user_id, _now_iso(), duration_seconds, len(selected), mode),
     )
     attempt_id = cur.lastrowid
 
@@ -126,7 +135,7 @@ def new_attempt():
     if not selected:
         return redirect(url_for("dashboard.settings"))
 
-    attempt_id = create_attempt(db, g.user["id"], selected, QUIZ_DURATION_SECONDS)
+    attempt_id = create_attempt(db, g.user["id"], selected, QUIZ_DURATION_SECONDS, mode="full")
     return redirect(url_for("quiz.view_attempt", attempt_id=attempt_id))
 
 
@@ -284,10 +293,19 @@ def results(attempt_id):
 
     pct = round((attempt["correct_count"] or 0) / attempt["total_questions"] * 100, 1)
 
+    max_score = None
+    is_pass = None
+    if attempt["mode"] == "full":
+        max_score = round(attempt["total_questions"] * CORRECT_POINTS, 2)
+        is_pass = (attempt["weighted_score"] or 0) >= PASS_THRESHOLD
+
     return render_template(
         "results.html",
         attempt=attempt,
         items=items,
         subject_rows=subject_rows,
         pct=pct,
+        max_score=max_score,
+        is_pass=is_pass,
+        pass_threshold=PASS_THRESHOLD,
     )

@@ -14,7 +14,7 @@ def home():
     attempts = db.execute(
         """
         SELECT a.id, a.started_at, a.finished_at, a.status, a.total_questions,
-               a.correct_count, a.duration_seconds, a.paused_at,
+               a.correct_count, a.duration_seconds, a.paused_at, a.mode, a.weighted_score,
                COUNT(DISTINCT aa.subject) AS subject_count,
                MIN(aa.subject) AS only_subject
         FROM attempts a

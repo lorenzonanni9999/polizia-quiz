@@ -146,6 +146,8 @@ h2 { font-size: 1.15rem; margin: 0 0 14px; color: var(--ink-900); }
 }
 .btn-ghost:hover { background: #f2f7fc; color: var(--blue); box-shadow: var(--shadow-sm); }
 .btn-small { padding: 7px 14px; font-size: 0.85rem; }
+.btn-danger { background: var(--red); }
+.btn-danger:hover { background: #a8323b; }
 .btn-large { padding: 15px 30px; font-size: 1.05rem; }
 
 .table {
@@ -326,6 +328,14 @@ h2 { font-size: 1.15rem; margin: 0 0 14px; color: var(--ink-900); }
 .submit-bar { text-align: center; }
 
 .score-big { font-size: 2.1rem; font-weight: 700; color: var(--blue); margin: 4px 0 10px; letter-spacing: -0.02em; }
+
+.official-score {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  margin: 0 0 4px;
+}
 
 .review-block {
   padding: 18px;

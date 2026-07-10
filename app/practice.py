@@ -44,5 +44,5 @@ def new_practice():
 
     db = get_db()
     selected = qmod.build_single_subject_quiz(subject, count)
-    attempt_id = create_attempt(db, g.user["id"], selected, minutes * 60)
+    attempt_id = create_attempt(db, g.user["id"], selected, minutes * 60, mode="practice")
     return redirect(url_for("quiz.view_attempt", attempt_id=attempt_id))

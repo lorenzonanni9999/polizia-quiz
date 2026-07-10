@@ -86,7 +86,7 @@ def user_detail(user_id):
     attempts = db.execute(
         """
         SELECT a.id, a.started_at, a.finished_at, a.status, a.total_questions,
-               a.correct_count, a.duration_seconds, a.paused_at,
+               a.correct_count, a.duration_seconds, a.paused_at, a.mode, a.weighted_score,
                COUNT(DISTINCT aa.subject) AS subject_count,
                MIN(aa.subject) AS only_subject
         FROM attempts a
@@ -129,3 +129,20 @@ def user_detail(user_id):
         avg_score=avg_score,
         subject_stats=subject_stats,
     )
+
+
+@bp.route("/users/<int:user_id>/attempts/<int:attempt_id>/delete", methods=("POST",))
+@admin_required
+def delete_attempt(user_id, attempt_id):
+    db = get_db()
+    attempt = db.execute(
+        "SELECT id FROM attempts WHERE id = ? AND user_id = ?", (attempt_id, user_id)
+    ).fetchone()
+    if attempt is None:
+        abort(404)
+
+    db.execute("DELETE FROM attempt_answers WHERE attempt_id = ?", (attempt_id,))
+    db.execute("DELETE FROM attempts WHERE id = ?", (attempt_id,))
+    db.commit()
+    flash("Simulazione eliminata.")
+    return redirect(url_for("admin.user_detail", user_id=user_id))

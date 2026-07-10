@@ -74,7 +74,13 @@
       <tr>
         <td>{{ a['started_at'][:16].replace('T', ' ') }}</td>
         <td>{{ a['only_subject'] if a['subject_count'] == 1 else 'Simulazione completa' }}</td>
-        <td>{{ a['correct_count'] }} / {{ a['total_questions'] }} ({{ ((a['correct_count'] or 0) / a['total_questions'] * 100) | round(1) }}%)</td>
+        <td>
+          {{ a['correct_count'] }} / {{ a['total_questions'] }} ({{ ((a['correct_count'] or 0) / a['total_questions'] * 100) | round(1) }}%)
+          {% if a['mode'] == 'full' %}
+          <br><span class="muted">{{ a['weighted_score'] }}/{{ (a['total_questions'] * 0.30) | round(2) }}
+            &middot; {{ 'idoneo' if (a['weighted_score'] or 0) >= 18 else 'non idoneo' }}</span>
+          {% endif %}
+        </td>
         <td>{{ 'Scaduta' if a['status'] == 'expired' else 'Completata' }}</td>
         <td><a class="btn btn-small" href="{{ url_for('quiz.results', attempt_id=a['id']) }}">Rivedi</a></td>
       </tr>

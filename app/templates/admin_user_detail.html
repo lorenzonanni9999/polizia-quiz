@@ -22,7 +22,7 @@
 <div class="card">
   <h2>In corso</h2>
   <table class="table">
-    <thead><tr><th>Iniziata</th><th>Tipo</th><th>Domande</th><th>Stato</th></tr></thead>
+    <thead><tr><th>Iniziata</th><th>Tipo</th><th>Domande</th><th>Stato</th><th></th></tr></thead>
     <tbody>
       {% for a in in_progress %}
       <tr>
@@ -30,6 +30,12 @@
         <td>{{ a['only_subject'] if a['subject_count'] == 1 else 'Simulazione completa' }}</td>
         <td>{{ a['total_questions'] }}</td>
         <td>{{ 'In pausa' if a['paused_at'] else 'Attiva' }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin.delete_attempt', user_id=user['id'], attempt_id=a['id']) }}"
+                onsubmit="return confirm('Eliminare definitivamente questa simulazione?');">
+            <button type="submit" class="btn btn-small btn-danger">Elimina</button>
+          </form>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -62,14 +68,26 @@
   <h2>Storico</h2>
   {% if completed %}
   <table class="table">
-    <thead><tr><th>Data</th><th>Tipo</th><th>Punteggio</th><th>Stato</th></tr></thead>
+    <thead><tr><th>Data</th><th>Tipo</th><th>Punteggio</th><th>Stato</th><th></th></tr></thead>
     <tbody>
       {% for a in completed %}
       <tr>
         <td>{{ a['started_at'][:16].replace('T', ' ') }}</td>
         <td>{{ a['only_subject'] if a['subject_count'] == 1 else 'Simulazione completa' }}</td>
-        <td>{{ a['correct_count'] }} / {{ a['total_questions'] }} ({{ ((a['correct_count'] or 0) / a['total_questions'] * 100) | round(1) }}%)</td>
+        <td>
+          {{ a['correct_count'] }} / {{ a['total_questions'] }} ({{ ((a['correct_count'] or 0) / a['total_questions'] * 100) | round(1) }}%)
+          {% if a['mode'] == 'full' %}
+          <br><span class="muted">{{ a['weighted_score'] }}/{{ (a['total_questions'] * 0.30) | round(2) }}
+            &middot; {{ 'idoneo' if (a['weighted_score'] or 0) >= 18 else 'non idoneo' }}</span>
+          {% endif %}
+        </td>
         <td>{{ 'Scaduta' if a['status'] == 'expired' else 'Completata' }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin.delete_attempt', user_id=user['id'], attempt_id=a['id']) }}"
+                onsubmit="return confirm('Eliminare definitivamente questa simulazione?');">
+            <button type="submit" class="btn btn-small btn-danger">Elimina</button>
+          </form>
+        </td>
       </tr>
       {% endfor %}
     </tbody>

@@ -11,6 +11,16 @@ ADMIN_PASSWORD = "admin"
 DEFAULT_QUOTA_PER_SUBJECT = 10
 QUIZ_DURATION_SECONDS = 90 * 60
 
+# Punteggio ufficiale della prova scritta Polizia di Stato, applicato solo
+# alle simulazioni complete (mode='full'), non all'allenamento per materia.
+# I bandi indicano un punteggio variabile per domanda in base alla difficoltà
+# (+0,29/+0,315 corretta, -0,015/-0,029 errata): non avendo il dato di
+# difficoltà per singola domanda usiamo un valore fisso al centro dei range,
+# scelto in modo che 100 risposte corrette diano esattamente 30/30.
+CORRECT_POINTS = 0.30
+WRONG_POINTS = -0.02
+PASS_THRESHOLD = 18.0
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,6 +45,8 @@ CREATE TABLE IF NOT EXISTS attempts (
     correct_count INTEGER,
     paused_at TEXT,
     paused_seconds INTEGER NOT NULL DEFAULT 0,
+    mode TEXT NOT NULL DEFAULT 'practice',
+    weighted_score REAL,
     FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
@@ -86,6 +98,8 @@ def init_db(app, subjects):
     _ensure_column(conn, "users", "is_admin", "INTEGER NOT NULL DEFAULT 0")
     _ensure_column(conn, "attempts", "paused_at", "TEXT")
     _ensure_column(conn, "attempts", "paused_seconds", "INTEGER NOT NULL DEFAULT 0")
+    _ensure_column(conn, "attempts", "mode", "TEXT NOT NULL DEFAULT 'practice'")
+    _ensure_column(conn, "attempts", "weighted_score", "REAL")
 
     conn.execute(
         "INSERT OR IGNORE INTO users (username, password_hash, is_admin) VALUES (?, ?, 0)",
