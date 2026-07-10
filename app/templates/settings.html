@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Impostazioni{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h1>Domande per materia</h1>
+  <p class="muted">Configura quante domande estrarre da ciascuna materia ad ogni nuova simulazione. Totale attuale: <strong id="total-quota">{{ total_quota }}</strong> domande.</p>
+
+  <form method="post" id="quota-form">
+    <table class="table">
+      <thead><tr><th>Materia</th><th>Domande disponibili</th><th>Domande per simulazione</th></tr></thead>
+      <tbody>
+        {% for info in subject_info %}
+        <tr>
+          <td>{{ info.subject }}</td>
+          <td class="muted">{{ info.available }}</td>
+          <td>
+            <input type="number" class="quota-input" min="0" max="{{ info.available }}"
+                   name="quota_{{ info.subject }}" value="{{ info.quota }}">
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button type="submit" class="btn btn-primary">Salva</button>
+  </form>
+</div>
+
+<script>
+const inputs = document.querySelectorAll('.quota-input');
+const totalEl = document.getElementById('total-quota');
+function updateTotal() {
+  let total = 0;
+  inputs.forEach(i => total += (parseInt(i.value, 10) || 0));
+  totalEl.textContent = total;
+}
+inputs.forEach(i => i.addEventListener('input', updateTotal));
+</script>
+
+{% endblock %}

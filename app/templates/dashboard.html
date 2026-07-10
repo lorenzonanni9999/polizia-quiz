@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="card hero-card">
+  <div class="card-row">
+    <div>
+      <h1>Le tue simulazioni</h1>
+      <p class="muted">
+        {% if avg_score is not none %}
+          Media punteggio su {{ completed|length }} simulazion{{ 'e' if completed|length == 1 else 'i' }} completat{{ 'a' if completed|length == 1 else 'e' }}: <strong>{{ avg_score }}%</strong>
+        {% else %}
+          Non hai ancora completato nessuna simulazione.
+        {% endif %}
+      </p>
+    </div>
+    <div class="hero-actions">
+      <a href="{{ url_for('practice.form') }}" class="btn btn-ghost">Allenamento per materia</a>
+      <form method="post" action="{{ url_for('quiz.new_attempt') }}">
+        <button type="submit" class="btn btn-primary">Nuova simulazione completa</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if in_progress %}
+<div class="card">
+  <h2>In corso</h2>
+  <table class="table">
+    <thead><tr><th>Iniziata</th><th>Tipo</th><th>Domande</th><th></th></tr></thead>
+    <tbody>
+      {% for a in in_progress %}
+      <tr>
+        <td>{{ a['started_at'][:16].replace('T', ' ') }}</td>
+        <td>{{ a['only_subject'] if a['subject_count'] == 1 else 'Simulazione completa' }}</td>
+        <td>{{ a['total_questions'] }}</td>
+        <td><a class="btn btn-small" href="{{ url_for('quiz.view_attempt', attempt_id=a['id']) }}">Riprendi</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if subject_stats %}
+<div class="card">
+  <h2>Andamento per materia</h2>
+  <table class="table">
+    <thead><tr><th>Materia</th><th>Corrette</th><th>Percentuale</th></tr></thead>
+    <tbody>
+      {% for s in subject_stats %}
+      <tr>
+        <td>{{ s['subject'] }}</td>
+        <td>{{ s['correct'] }} / {{ s['total'] }}</td>
+        <td>
+          <div class="bar"><div class="bar-fill" style="width: {{ (s['correct'] / s['total'] * 100) | round(1) }}%"></div></div>
+          {{ (s['correct'] / s['total'] * 100) | round(1) }}%
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Storico</h2>
+  {% if completed %}
+  <table class="table">
+    <thead><tr><th>Data</th><th>Tipo</th><th>Punteggio</th><th>Stato</th><th></th></tr></thead>
+    <tbody>
+      {% for a in completed %}
+      <tr>
+        <td>{{ a['started_at'][:16].replace('T', ' ') }}</td>
+        <td>{{ a['only_subject'] if a['subject_count'] == 1 else 'Simulazione completa' }}</td>
+        <td>{{ a['correct_count'] }} / {{ a['total_questions'] }} ({{ ((a['correct_count'] or 0) / a['total_questions'] * 100) | round(1) }}%)</td>
+        <td>{{ 'Scaduta' if a['status'] == 'expired' else 'Completata' }}</td>
+        <td><a class="btn btn-small" href="{{ url_for('quiz.results', attempt_id=a['id']) }}">Rivedi</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Nessuna simulazione completata finora.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

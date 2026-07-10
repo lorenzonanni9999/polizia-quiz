@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Risultati{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h1>Risultato simulazione</h1>
+  <p class="score-big">{{ attempt['correct_count'] }} / {{ attempt['total_questions'] }} <span class="muted">({{ pct }}%)</span></p>
+  <p class="muted">
+    Iniziata il {{ attempt['started_at'][:16].replace('T', ' ') }}
+    {% if attempt['status'] == 'expired' %} &middot; tempo scaduto{% endif %}
+  </p>
+
+  <table class="table">
+    <thead><tr><th>Materia</th><th>Risposte date</th><th>Corrette</th></tr></thead>
+    <tbody>
+      {% for s in subject_rows %}
+      <tr>
+        <td>{{ s.subject }}</td>
+        <td>{{ s.answered }} / {{ s.total }}</td>
+        <td>{{ s.correct }} / {{ s.total }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <a class="btn" href="{{ url_for('dashboard.home') }}">Torna alla dashboard</a>
+</div>
+
+<div class="card">
+  <h2>Revisione domande</h2>
+  {% for item in items %}
+  <div class="review-block {{ 'review-correct' if item.is_correct == 1 else ('review-wrong' if item.selected_position is not none else 'review-blank') }}">
+    <p class="review-subject">{{ item.subject }} &middot; {{ loop.index }}</p>
+    <p class="question-text">{{ item.question }}</p>
+    <div class="options">
+      {% for opt in item.options %}
+      <div class="option review-option
+          {{ 'is-correct' if loop.index0 == item.correct_position }}
+          {{ 'is-selected-wrong' if loop.index0 == item.selected_position and item.is_correct == 0 }}">
+        <span>{{ opt }}</span>
+        {% if loop.index0 == item.correct_position %}<span class="tag tag-correct">Corretta</span>{% endif %}
+        {% if loop.index0 == item.selected_position and item.is_correct == 0 %}<span class="tag tag-wrong">Tua risposta</span>{% endif %}
+      </div>
+      {% endfor %}
+      {% if item.selected_position is none %}
+      <p class="muted">Nessuna risposta data.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

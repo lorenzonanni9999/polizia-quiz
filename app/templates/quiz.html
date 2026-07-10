@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Simulazione in corso{% endblock %}
+{% block content %}
+
+<div class="quiz-header">
+  <div>Domande: <strong>{{ attempt['total_questions'] }}</strong> &middot; Risposte date: <strong id="answered-count">0</strong>/{{ attempt['total_questions'] }}</div>
+  <div class="timer" id="timer">90:00</div>
+</div>
+
+<form method="post" action="{{ url_for('quiz.submit_attempt', attempt_id=attempt['id']) }}" id="quiz-form">
+  {% for group in grouped %}
+  <div class="card">
+    <h2 class="subject-heading">{{ group.subject }}</h2>
+    {% for item in group.questions %}
+    <div class="question-block">
+      <p class="question-text">{{ item.position + 1 }}. {{ item.question }}</p>
+      <div class="options">
+        {% for opt in item.options %}
+        <label class="option">
+          <input type="radio" name="answer_{{ item.position }}" value="{{ loop.index0 }}">
+          <span>{{ opt }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  <div class="card submit-bar">
+    <button type="submit" class="btn btn-primary btn-large">Consegna simulazione</button>
+  </div>
+</form>
+
+<script>
+let remaining = {{ remaining_seconds }};
+const timerEl = document.getElementById('timer');
+const form = document.getElementById('quiz-form');
+const answeredEl = document.getElementById('answered-count');
+const totalQuestions = {{ attempt['total_questions'] }};
+
+function formatTime(s) {
+  s = Math.max(0, s);
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
+function tick() {
+  timerEl.textContent = formatTime(remaining);
+  if (remaining <= 300) {
+    timerEl.classList.add('timer-warning');
+  }
+  if (remaining <= 0) {
+    clearInterval(intervalId);
+    form.submit();
+    return;
+  }
+  remaining -= 1;
+}
+tick();
+const intervalId = setInterval(tick, 1000);
+
+function updateAnsweredCount() {
+  const groups = {};
+  form.querySelectorAll('input[type=radio]:checked').forEach(el => {
+    groups[el.name] = true;
+  });
+  answeredEl.textContent = Object.keys(groups).length;
+}
+form.addEventListener('change', updateAnsweredCount);
+
+form.addEventListener('submit', function (e) {
+  const groups = {};
+  form.querySelectorAll('input[type=radio]:checked').forEach(el => { groups[el.name] = true; });
+  const unanswered = totalQuestions - Object.keys(groups).length;
+  if (unanswered > 0 && remaining > 0) {
+    if (!confirm(unanswered + ' domande senza risposta. Consegnare comunque?')) {
+      e.preventDefault();
+    }
+  }
+});
+</script>
+
+{% endblock %}

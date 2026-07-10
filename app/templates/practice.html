@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Allenamento per materia{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h1>Allenamento per materia</h1>
+  <p class="muted">Scegli una singola materia, quante domande vuoi e quanto tempo darti per rispondere.</p>
+
+  <form method="post" action="{{ url_for('practice.new_practice') }}" class="practice-form">
+    <label>Materia
+      <select name="subject" id="subject-select">
+        {% for s in subjects %}
+        <option value="{{ s.subject }}" data-available="{{ s.available }}">{{ s.subject }} ({{ s.available }} disponibili)</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Numero di domande
+      <input type="number" name="count" id="count-input" min="1" value="10" required>
+    </label>
+    <p class="muted" id="available-hint"></p>
+
+    <label>Tempo a disposizione (minuti)
+      <input type="number" name="minutes" min="1" max="240" value="15" required>
+    </label>
+
+    <button type="submit" class="btn btn-primary">Avvia allenamento</button>
+  </form>
+</div>
+
+<script>
+const select = document.getElementById('subject-select');
+const countInput = document.getElementById('count-input');
+const hint = document.getElementById('available-hint');
+
+function syncMax() {
+  const opt = select.options[select.selectedIndex];
+  const available = parseInt(opt.dataset.available, 10);
+  countInput.max = available;
+  if (parseInt(countInput.value, 10) > available) {
+    countInput.value = available;
+  }
+  hint.textContent = 'Massimo disponibile per questa materia: ' + available;
+}
+select.addEventListener('change', syncMax);
+syncMax();
+</script>
+
+{% endblock %}
