@@ -1,10 +1,64 @@
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
 from .auth import login_required
-from .db import get_db
+from .db import get_db, CORRECT_POINTS, PASS_THRESHOLD
 from . import questions as qmod
 
 bp = Blueprint("dashboard", __name__)
+
+CHART_WIDTH = 600
+CHART_HEIGHT = 160
+CHART_PAD_X = 16
+CHART_PAD_Y = 14
+
+
+def _score_history_chart(db, user_id):
+    rows = db.execute(
+        """
+        SELECT started_at, weighted_score, total_questions
+        FROM attempts
+        WHERE user_id = ? AND mode = 'full' AND status != 'in_progress'
+        ORDER BY started_at ASC
+        """,
+        (user_id,),
+    ).fetchall()
+
+    if len(rows) < 2:
+        return None
+
+    pass_pct = PASS_THRESHOLD / 30 * 100
+    pcts = []
+    for r in rows:
+        max_score = (r["total_questions"] or 0) * CORRECT_POINTS
+        pct = 0.0
+        if max_score:
+            pct = max(0.0, min(100.0, (r["weighted_score"] or 0) / max_score * 100))
+        pcts.append(round(pct, 1))
+
+    plot_w = CHART_WIDTH - 2 * CHART_PAD_X
+    plot_h = CHART_HEIGHT - 2 * CHART_PAD_Y
+    n = len(pcts)
+    step = plot_w / (n - 1)
+
+    def x_of(i):
+        return round(CHART_PAD_X + i * step, 1)
+
+    def y_of(pct):
+        return round(CHART_PAD_Y + (1 - pct / 100) * plot_h, 1)
+
+    points = [
+        {"x": x_of(i), "y": y_of(pct), "pct": pct, "is_pass": pct >= pass_pct}
+        for i, pct in enumerate(pcts)
+    ]
+    polyline = " ".join(f"{p['x']},{p['y']}" for p in points)
+
+    return {
+        "points": points,
+        "polyline": polyline,
+        "threshold_y": y_of(pass_pct),
+        "width": CHART_WIDTH,
+        "height": CHART_HEIGHT,
+    }
 
 
 @bp.route("/")
@@ -50,12 +104,15 @@ def home():
         (g.user["id"],),
     ).fetchall()
 
+    chart = _score_history_chart(db, g.user["id"])
+
     return render_template(
         "dashboard.html",
         completed=completed,
         in_progress=in_progress,
         avg_score=avg_score,
         subject_stats=subject_stats,
+        chart=chart,
     )
 
 
@@ -84,6 +141,15 @@ def settings():
                 "UPDATE subject_quota SET quota = ? WHERE subject = ?",
                 (value, subject),
             )
+
+        question_order = request.form.get("question_order", "grouped")
+        if question_order not in ("grouped", "random"):
+            question_order = "grouped"
+        db.execute(
+            "UPDATE app_settings SET value = ? WHERE key = 'question_order'",
+            (question_order,),
+        )
+
         db.commit()
         flash(f"Impostazioni salvate. Domande totali per simulazione: {total}.")
 
@@ -99,6 +165,14 @@ def settings():
     ]
     total_quota = sum(info["quota"] for info in subject_info)
 
+    order_row = db.execute(
+        "SELECT value FROM app_settings WHERE key = 'question_order'"
+    ).fetchone()
+    question_order = order_row["value"] if order_row else "grouped"
+
     return render_template(
-        "settings.html", subject_info=subject_info, total_quota=total_quota
+        "settings.html",
+        subject_info=subject_info,
+        total_quota=total_quota,
+        question_order=question_order,
     )

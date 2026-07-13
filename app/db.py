@@ -62,11 +62,31 @@ CREATE TABLE IF NOT EXISTS attempt_answers (
     FOREIGN KEY (attempt_id) REFERENCES attempts (id)
 );
 
+CREATE TABLE IF NOT EXISTS bookmarks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    question_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (user_id, question_id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
+
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_attempt_answers_attempt
     ON attempt_answers (attempt_id);
 CREATE INDEX IF NOT EXISTS idx_attempts_user
     ON attempts (user_id);
+CREATE INDEX IF NOT EXISTS idx_bookmarks_user
+    ON bookmarks (user_id);
 """
+
+DEFAULT_APP_SETTINGS = {
+    "question_order": "grouped",
+}
 
 
 def get_db():
@@ -100,6 +120,13 @@ def init_db(app, subjects):
     _ensure_column(conn, "attempts", "paused_seconds", "INTEGER NOT NULL DEFAULT 0")
     _ensure_column(conn, "attempts", "mode", "TEXT NOT NULL DEFAULT 'practice'")
     _ensure_column(conn, "attempts", "weighted_score", "REAL")
+    _ensure_column(conn, "attempts", "question_order", "TEXT NOT NULL DEFAULT 'grouped'")
+
+    for key, value in DEFAULT_APP_SETTINGS.items():
+        conn.execute(
+            "INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)",
+            (key, value),
+        )
 
     conn.execute(
         "INSERT OR IGNORE INTO users (username, password_hash, is_admin) VALUES (?, ?, 0)",

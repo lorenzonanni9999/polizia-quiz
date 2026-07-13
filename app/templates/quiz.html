@@ -1,5 +1,28 @@
 {% extends "base.html" %}
 {% block title %}Simulazione in corso{% endblock %}
+
+{% macro question_block(item, show_subject_tag) %}
+<div class="question-block">
+  <div class="question-head">
+    <p class="question-text">
+      {% if show_subject_tag %}<span class="review-subject">{{ item.subject }}</span><br>{% endif %}
+      {{ item.position + 1 }}. {{ item.question }}
+    </p>
+    <button type="button" class="star-btn {{ 'is-active' if item.is_bookmarked }}" data-question-id="{{ item.question_id }}" title="Preferiti">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2.5l3.09 6.26 6.91.99-5 4.87 1.18 6.88L12 17.77l-6.18 3.23L7 14.12 2 9.25l6.91-.99z"/></svg>
+    </button>
+  </div>
+  <div class="options">
+    {% for opt in item.options %}
+    <label class="option">
+      <input type="radio" name="answer_{{ item.position }}" value="{{ loop.index0 }}" {{ 'checked' if item.selected_position == loop.index0 }}>
+      <span>{{ opt }}</span>
+    </label>
+    {% endfor %}
+  </div>
+</div>
+{% endmacro %}
+
 {% block content %}
 
 <div class="quiz-header">
@@ -15,24 +38,22 @@
 </div>
 
 <form method="post" action="{{ url_for('quiz.submit_attempt', attempt_id=attempt['id']) }}" id="quiz-form">
+  {% if attempt['question_order'] == 'random' %}
+  <div class="card">
+    {% for item in items %}
+    {{ question_block(item, true) }}
+    {% endfor %}
+  </div>
+  {% else %}
   {% for group in grouped %}
   <div class="card">
     <h2 class="subject-heading">{{ group.subject }}</h2>
     {% for item in group.questions %}
-    <div class="question-block">
-      <p class="question-text">{{ item.position + 1 }}. {{ item.question }}</p>
-      <div class="options">
-        {% for opt in item.options %}
-        <label class="option">
-          <input type="radio" name="answer_{{ item.position }}" value="{{ loop.index0 }}" {{ 'checked' if item.selected_position == loop.index0 }}>
-          <span>{{ opt }}</span>
-        </label>
-        {% endfor %}
-      </div>
-    </div>
+    {{ question_block(item, false) }}
     {% endfor %}
   </div>
   {% endfor %}
+  {% endif %}
 
   <div class="card submit-bar">
     <button type="submit" class="btn btn-primary btn-large">Consegna simulazione</button>

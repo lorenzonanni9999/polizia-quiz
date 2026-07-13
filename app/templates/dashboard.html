@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as macros %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 
@@ -15,13 +16,29 @@
       </p>
     </div>
     <div class="hero-actions">
-      <a href="{{ url_for('practice.form') }}" class="btn btn-ghost">Allenamento per materia</a>
+      <a href="{{ url_for('practice.hub') }}" class="btn btn-ghost">Allenamento</a>
       <form method="post" action="{{ url_for('quiz.new_attempt') }}">
         <button type="submit" class="btn btn-primary">Nuova simulazione completa</button>
       </form>
     </div>
   </div>
 </div>
+
+{% if chart %}
+<div class="card">
+  <h2>Andamento nel tempo</h2>
+  <p class="muted">Punteggio ufficiale (in % del massimo) delle simulazioni complete, in ordine cronologico. La linea tratteggiata indica la soglia di idoneità.</p>
+  <svg class="chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" width="100%" height="{{ chart.height }}">
+    <line x1="0" y1="{{ chart.threshold_y }}" x2="{{ chart.width }}" y2="{{ chart.threshold_y }}" class="chart-threshold"/>
+    <polyline points="{{ chart.polyline }}" class="chart-line"/>
+    {% for p in chart.points %}
+    <circle cx="{{ p.x }}" cy="{{ p.y }}" r="4" class="chart-dot {{ 'is-pass' if p.is_pass else 'is-fail' }}">
+      <title>{{ p.pct }}%</title>
+    </circle>
+    {% endfor %}
+  </svg>
+</div>
+{% endif %}
 
 {% if in_progress %}
 <div class="card">
@@ -32,10 +49,10 @@
       {% for a in in_progress %}
       <tr>
         <td>{{ a['started_at'][:16].replace('T', ' ') }}</td>
-        <td>{{ a['only_subject'] if a['subject_count'] == 1 else 'Simulazione completa' }}</td>
+        <td>{{ macros.attempt_type_label(a) }}</td>
         <td>{{ a['total_questions'] }}</td>
         <td>{% if a['paused_at'] %}<span class="tag tag-paused">In pausa</span>{% else %}In corso{% endif %}</td>
-        <td><a class="btn btn-small" href="{{ url_for('quiz.view_attempt', attempt_id=a['id']) }}">Riprendi</a></td>
+        <td><a class="btn btn-small" href="{{ url_for('quiz.view_attempt', attempt_id=a['id']) if a['mode'] != 'study' else url_for('study.view_current', attempt_id=a['id']) }}">Riprendi</a></td>
       </tr>
       {% endfor %}
     </tbody>
@@ -73,7 +90,7 @@
       {% for a in completed %}
       <tr>
         <td>{{ a['started_at'][:16].replace('T', ' ') }}</td>
-        <td>{{ a['only_subject'] if a['subject_count'] == 1 else 'Simulazione completa' }}</td>
+        <td>{{ macros.attempt_type_label(a) }}</td>
         <td>
           {{ a['correct_count'] }} / {{ a['total_questions'] }} ({{ ((a['correct_count'] or 0) / a['total_questions'] * 100) | round(1) }}%)
           {% if a['mode'] == 'full' %}

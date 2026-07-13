@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Ripasso mirato{% endblock %}
+{% block content %}
+
+<div class="card">
+  <a href="{{ url_for('practice.hub') }}" class="muted">&larr; Modalità di allenamento</a>
+  <h1>Ripasso mirato</h1>
+
+  {% if available > 0 %}
+  <p class="muted">Hai {{ available }} domand{{ 'a' if available == 1 else 'e' }} la cui ultima risposta data è stata sbagliata. Scegli quante ripassarne e in quanto tempo.</p>
+  <form method="post" action="{{ url_for('review.new_review') }}" class="practice-form">
+    <label>Numero di domande
+      <input type="number" name="count" min="1" max="{{ available }}" value="{{ [available, 10] | min }}" required>
+    </label>
+    <label>Tempo a disposizione (minuti)
+      <input type="number" name="minutes" min="1" max="240" value="15" required>
+    </label>
+    <button type="submit" class="btn btn-primary">Avvia ripasso</button>
+  </form>
+  {% else %}
+  <p class="muted">Nessuna domanda da ripassare al momento: non hai risposte sbagliate in sospeso. Continua così.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

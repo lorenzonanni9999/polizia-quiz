@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Modalità studio{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="card-row">
+    <span class="eyebrow" style="margin:0">{{ subject }} &middot; domanda {{ answered }} di {{ total }}</span>
+    <a href="{{ url_for('dashboard.home') }}" class="muted">Esci</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="question-head">
+    <p class="question-text">
+      {% if is_correct == 1 %}<span class="tag tag-correct">Corretta</span>{% else %}<span class="tag tag-wrong">Sbagliata</span>{% endif %}
+      {{ question }}
+    </p>
+    <button type="button" class="star-btn {{ 'is-active' if is_bookmarked }}" data-question-id="{{ question_id }}" title="Preferiti">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2.5l3.09 6.26 6.91.99-5 4.87 1.18 6.88L12 17.77l-6.18 3.23L7 14.12 2 9.25l6.91-.99z"/></svg>
+    </button>
+  </div>
+  <div class="options">
+    {% for opt in options %}
+    <div class="option review-option
+        {{ 'is-correct' if loop.index0 == correct_position }}
+        {{ 'is-selected-wrong' if loop.index0 == selected_position and is_correct == 0 }}">
+      <span>{{ opt }}</span>
+      {% if loop.index0 == correct_position %}<span class="tag tag-correct">Corretta</span>{% endif %}
+      {% if loop.index0 == selected_position and is_correct == 0 %}<span class="tag tag-wrong">Tua risposta</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="submit-bar" style="margin-top:20px">
+    <a href="{{ url_for('study.view_current', attempt_id=attempt['id']) }}" class="btn btn-primary btn-large">
+      {{ 'Vedi il riepilogo' if answered >= total else 'Prossima domanda' }}
+    </a>
+  </div>
+</div>
+
+{% endblock %}

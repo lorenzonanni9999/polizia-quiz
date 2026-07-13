@@ -169,6 +169,15 @@ h2 {
 
 .muted { color: var(--muted); font-size: 0.92rem; }
 
+/* ---------- Chart ---------- */
+
+.chart { display: block; margin-top: 6px; overflow: visible; }
+.chart-threshold { stroke: var(--gold); stroke-width: 1; stroke-dasharray: 4 4; }
+.chart-line { fill: none; stroke: var(--navy-2); stroke-width: 2; }
+.chart-dot { stroke: var(--paper-card); stroke-width: 2; }
+.chart-dot.is-pass { fill: var(--green); }
+.chart-dot.is-fail { fill: var(--red); }
+
 /* ---------- Buttons ---------- */
 
 .btn {
@@ -241,6 +250,39 @@ h2 {
   height: 100%;
   background: var(--gold);
   border-radius: 999px;
+}
+
+/* ---------- Practice hub ---------- */
+
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+.mode-card {
+  display: block;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--navy);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s ease, transform 0.12s ease, border-color 0.15s ease;
+}
+.mode-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-top-color: var(--gold);
+}
+.mode-card-title {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+@media (max-width: 640px) {
+  .mode-grid { grid-template-columns: 1fr; }
 }
 
 /* ---------- Auth ---------- */
@@ -385,6 +427,28 @@ h2 {
 
 .question-text { font-weight: 600; margin: 0 0 12px; color: var(--ink); }
 
+.question-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.star-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--rule);
+  flex-shrink: 0;
+  line-height: 0;
+  transition: color 0.15s ease, transform 0.1s ease;
+}
+.star-btn:hover { color: var(--gold-soft); transform: scale(1.08); }
+.star-btn svg { fill: none; stroke: currentColor; stroke-width: 1.5; display: block; }
+.star-btn.is-active { color: var(--gold); }
+.star-btn.is-active svg { fill: currentColor; }
+
 .options { display: flex; flex-direction: column; gap: 9px; }
 
 .option {
@@ -474,4 +538,19 @@ h2 {
   .topbar { padding: 12px 18px; min-height: auto; }
   .topnav a { padding: 6px 0; margin-left: 0; margin-right: 18px; }
   .result-hero { flex-direction: column; align-items: flex-start; }
+}
+
+/* ---------- Print (pagella PDF) ---------- */
+
+@media print {
+  .no-print, .topbar, .flash-list { display: none !important; }
+  body { background: #fff; }
+  .container { max-width: 100%; margin: 0; padding: 0; }
+  .card {
+    box-shadow: none;
+    border: 1px solid #ccc;
+    break-inside: avoid;
+  }
+  .review-block { break-inside: avoid; }
+  a { color: var(--ink); }
 }

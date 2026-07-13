@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Allenamento{% endblock %}
+{% block content %}
+
+<div class="card">
+  <span class="eyebrow">Modalità</span>
+  <h1>Come vuoi allenarti?</h1>
+  <p class="muted">Scegli la modalità più adatta a questa sessione.</p>
+</div>
+
+<div class="mode-grid">
+  <a class="mode-card" href="{{ url_for('practice.form') }}">
+    <h2 class="mode-card-title">Per materia</h2>
+    <p class="muted">Scegli una materia, il numero di domande e il tempo. Con timer, come una mini simulazione.</p>
+  </a>
+
+  <a class="mode-card" href="{{ url_for('practice.study_form') }}">
+    <h2 class="mode-card-title">Modalità studio</h2>
+    <p class="muted">Una domanda alla volta, senza timer, con correzione immediata dopo ogni risposta. Ideale per imparare.</p>
+  </a>
+
+  <a class="mode-card" href="{{ url_for('review.form') }}">
+    <h2 class="mode-card-title">Ripasso mirato</h2>
+    <p class="muted">
+      {% if review_count > 0 %}
+        {{ review_count }} domand{{ 'a' if review_count == 1 else 'e' }} da rivedere, tra quelle sbagliate finora.
+      {% else %}
+        Nessuna domanda sbagliata da rivedere al momento: complimenti.
+      {% endif %}
+    </p>
+  </a>
+
+  <a class="mode-card" href="{{ url_for('bookmarks.list_bookmarks') }}">
+    <h2 class="mode-card-title">Domande preferite</h2>
+    <p class="muted">
+      {% if bookmark_count > 0 %}
+        {{ bookmark_count }} domand{{ 'a' if bookmark_count == 1 else 'e' }} salvat{{ 'a' if bookmark_count == 1 else 'e' }} come preferite.
+      {% else %}
+        Nessuna domanda preferita ancora: segnale con la stellina durante un quiz.
+      {% endif %}
+    </p>
+  </a>
+</div>
+
+{% endblock %}

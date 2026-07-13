@@ -49,10 +49,11 @@ def build_single_subject_quiz(subject, count):
     return selected
 
 
-def build_quiz(subject_quota):
+def build_quiz(subject_quota, order="grouped"):
     """Pick random questions per subject/quota and shuffle each question's
-    options. Returns a list of dicts ready to be persisted as attempt_answers,
-    grouped by subject, each with a fresh random option order."""
+    options. Returns a list of dicts ready to be persisted as attempt_answers.
+    With order='grouped' (default) questions from the same subject stay
+    together; with order='random' the whole list is shuffled."""
     selected = []
     for subject in _subjects_order:
         quota = subject_quota.get(subject, 0)
@@ -62,11 +63,35 @@ def build_quiz(subject_quota):
             continue
         chosen_ids = random.sample(pool, quota)
         for qid in chosen_ids:
-            order = [0, 1, 2, 3, 4]
-            random.shuffle(order)
+            opt_order = [0, 1, 2, 3, 4]
+            random.shuffle(opt_order)
             selected.append({
                 "question_id": qid,
                 "subject": subject,
-                "option_order": order,
+                "option_order": opt_order,
             })
+    if order == "random":
+        random.shuffle(selected)
+    return selected
+
+
+def build_quiz_from_ids(question_ids, count=None):
+    """Build a quiz from a specific pool of question ids (e.g. previously
+    wrong answers or bookmarks), each with a fresh random option order."""
+    pool = list(question_ids)
+    if count is not None:
+        count = max(0, min(count, len(pool)))
+        pool = random.sample(pool, count)
+    else:
+        random.shuffle(pool)
+    selected = []
+    for qid in pool:
+        q = _questions_by_id[qid]
+        opt_order = [0, 1, 2, 3, 4]
+        random.shuffle(opt_order)
+        selected.append({
+            "question_id": qid,
+            "subject": q["subject"],
+            "option_order": opt_order,
+        })
     return selected

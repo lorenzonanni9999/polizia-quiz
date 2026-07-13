@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as macros %}
 {% block title %}Andamento di {{ user['username'] }}{% endblock %}
 {% block content %}
 
@@ -27,7 +28,7 @@
       {% for a in in_progress %}
       <tr>
         <td>{{ a['started_at'][:16].replace('T', ' ') }}</td>
-        <td>{{ a['only_subject'] if a['subject_count'] == 1 else 'Simulazione completa' }}</td>
+        <td>{{ macros.attempt_type_label(a) }}</td>
         <td>{{ a['total_questions'] }}</td>
         <td>{{ 'In pausa' if a['paused_at'] else 'Attiva' }}</td>
         <td>
@@ -73,7 +74,7 @@
       {% for a in completed %}
       <tr>
         <td>{{ a['started_at'][:16].replace('T', ' ') }}</td>
-        <td>{{ a['only_subject'] if a['subject_count'] == 1 else 'Simulazione completa' }}</td>
+        <td>{{ macros.attempt_type_label(a) }}</td>
         <td>
           {{ a['correct_count'] }} / {{ a['total_questions'] }} ({{ ((a['correct_count'] or 0) / a['total_questions'] * 100) | round(1) }}%)
           {% if a['mode'] == 'full' %}

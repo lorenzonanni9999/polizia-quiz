@@ -1,0 +1,9 @@
+{% macro attempt_type_label(a) -%}
+{%- if a['mode'] == 'full' -%}Simulazione completa
+{%- elif a['mode'] == 'practice' -%}{{ a['only_subject'] }}
+{%- elif a['mode'] == 'study' -%}Studio &middot; {{ a['only_subject'] }}
+{%- elif a['mode'] == 'review' -%}Ripasso mirato
+{%- elif a['mode'] == 'bookmarks' -%}Domande preferite
+{%- else -%}{{ a['only_subject'] if a['subject_count'] == 1 else 'Simulazione completa' }}
+{%- endif -%}
+{%- endmacro %}

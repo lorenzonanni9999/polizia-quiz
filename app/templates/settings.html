@@ -3,10 +3,25 @@
 {% block content %}
 
 <div class="card">
-  <h1>Domande per materia</h1>
-  <p class="muted">Configura quante domande estrarre da ciascuna materia ad ogni nuova simulazione. Totale attuale: <strong id="total-quota">{{ total_quota }}</strong> domande.</p>
+  <span class="eyebrow">Simulazione completa</span>
+  <h1>Impostazioni</h1>
 
   <form method="post" id="quota-form">
+    <h2>Ordine delle domande</h2>
+    <p class="muted">Come presentare le domande in una nuova simulazione completa.</p>
+    <div class="options" style="max-width:420px; margin-bottom:28px">
+      <label class="option">
+        <input type="radio" name="question_order" value="grouped" {{ 'checked' if question_order == 'grouped' }}>
+        <span>Raggruppate per materia (una sezione per volta)</span>
+      </label>
+      <label class="option">
+        <input type="radio" name="question_order" value="random" {{ 'checked' if question_order == 'random' }}>
+        <span>Ordine casuale (materie mischiate, più simile alla prova vera)</span>
+      </label>
+    </div>
+
+    <h2>Domande per materia</h2>
+    <p class="muted">Configura quante domande estrarre da ciascuna materia. Totale attuale: <strong id="total-quota">{{ total_quota }}</strong> domande.</p>
     <table class="table">
       <thead><tr><th>Materia</th><th>Domande disponibili</th><th>Domande per simulazione</th></tr></thead>
       <tbody>

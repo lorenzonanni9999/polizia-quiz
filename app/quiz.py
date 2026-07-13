@@ -10,6 +10,9 @@ from . import questions as qmod
 
 bp = Blueprint("quiz", __name__, url_prefix="/quiz")
 
+MIN_MINUTES = 1
+MAX_MINUTES = 240
+
 
 def _now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -19,7 +22,7 @@ def _parse_iso(value):
     return datetime.fromisoformat(value)
 
 
-def _get_owned_attempt(db, attempt_id):
+def get_owned_attempt(db, attempt_id):
     attempt = db.execute(
         "SELECT * FROM attempts WHERE id = ?", (attempt_id,)
     ).fetchone()
@@ -53,7 +56,7 @@ def _resume_if_paused(db, attempt):
             (new_total, attempt["id"]),
         )
         db.commit()
-        return _get_owned_attempt(db, attempt["id"])
+        return get_owned_attempt(db, attempt["id"])
     return attempt
 
 
@@ -89,7 +92,7 @@ def _save_answers_from_form(db, attempt_id, form):
     db.commit()
 
 
-def _grade_and_close(db, attempt, status):
+def grade_and_close(db, attempt, status):
     answers = db.execute(
         "SELECT * FROM attempt_answers WHERE attempt_id = ?", (attempt["id"],)
     ).fetchall()
@@ -110,12 +113,12 @@ def _grade_and_close(db, attempt, status):
     db.commit()
 
 
-def create_attempt(db, user_id, selected, duration_seconds, mode="practice"):
+def create_attempt(db, user_id, selected, duration_seconds, mode="practice", question_order="grouped"):
     """Persist a new attempt (and its question snapshot) and return its id."""
     cur = db.execute(
-        """INSERT INTO attempts (user_id, started_at, duration_seconds, status, total_questions, mode)
-           VALUES (?, ?, ?, 'in_progress', ?, ?)""",
-        (user_id, _now_iso(), duration_seconds, len(selected), mode),
+        """INSERT INTO attempts (user_id, started_at, duration_seconds, status, total_questions, mode, question_order)
+           VALUES (?, ?, ?, 'in_progress', ?, ?, ?)""",
+        (user_id, _now_iso(), duration_seconds, len(selected), mode, question_order),
     )
     attempt_id = cur.lastrowid
 
@@ -137,11 +140,19 @@ def new_attempt():
     rows = db.execute("SELECT subject, quota FROM subject_quota").fetchall()
     subject_quota = {r["subject"]: r["quota"] for r in rows}
 
-    selected = qmod.build_quiz(subject_quota)
+    order_row = db.execute(
+        "SELECT value FROM app_settings WHERE key = 'question_order'"
+    ).fetchone()
+    question_order = order_row["value"] if order_row else "grouped"
+
+    selected = qmod.build_quiz(subject_quota, order=question_order)
     if not selected:
         return redirect(url_for("dashboard.settings"))
 
-    attempt_id = create_attempt(db, g.user["id"], selected, QUIZ_DURATION_SECONDS, mode="full")
+    attempt_id = create_attempt(
+        db, g.user["id"], selected, QUIZ_DURATION_SECONDS,
+        mode="full", question_order=question_order,
+    )
     return redirect(url_for("quiz.view_attempt", attempt_id=attempt_id))
 
 
@@ -149,7 +160,7 @@ def new_attempt():
 @login_required
 def view_attempt(attempt_id):
     db = get_db()
-    attempt = _get_owned_attempt(db, attempt_id)
+    attempt = get_owned_attempt(db, attempt_id)
 
     if attempt["status"] != "in_progress":
         return redirect(url_for("quiz.results", attempt_id=attempt_id))
@@ -159,13 +170,19 @@ def view_attempt(attempt_id):
 
     remaining = _remaining_seconds(attempt)
     if remaining <= 0:
-        _grade_and_close(db, attempt, "expired")
+        grade_and_close(db, attempt, "expired")
         return redirect(url_for("quiz.results", attempt_id=attempt_id))
 
     answer_rows = db.execute(
         "SELECT * FROM attempt_answers WHERE attempt_id = ? ORDER BY position",
         (attempt_id,),
     ).fetchall()
+
+    bookmarked_ids = {
+        r["question_id"] for r in db.execute(
+            "SELECT question_id FROM bookmarks WHERE user_id = ?", (g.user["id"],)
+        ).fetchall()
+    }
 
     items = []
     for row in answer_rows:
@@ -174,10 +191,12 @@ def view_attempt(attempt_id):
         display_options = [q["options"][i] for i in order]
         items.append({
             "position": row["position"],
+            "question_id": row["question_id"],
             "subject": row["subject"],
             "question": q["question"],
             "options": display_options,
             "selected_position": row["selected_position"],
+            "is_bookmarked": row["question_id"] in bookmarked_ids,
         })
 
     subjects_in_order = []
@@ -192,6 +211,7 @@ def view_attempt(attempt_id):
     return render_template(
         "quiz.html",
         attempt=attempt,
+        items=items,
         grouped=grouped,
         remaining_seconds=int(remaining),
     )
@@ -201,7 +221,7 @@ def view_attempt(attempt_id):
 @login_required
 def pause_attempt(attempt_id):
     db = get_db()
-    attempt = _get_owned_attempt(db, attempt_id)
+    attempt = get_owned_attempt(db, attempt_id)
     if attempt["status"] != "in_progress":
         return jsonify({"error": "not in progress"}), 400
 
@@ -214,7 +234,7 @@ def pause_attempt(attempt_id):
 @login_required
 def resume_attempt(attempt_id):
     db = get_db()
-    attempt = _get_owned_attempt(db, attempt_id)
+    attempt = get_owned_attempt(db, attempt_id)
     if attempt["status"] != "in_progress":
         return jsonify({"error": "not in progress"}), 400
 
@@ -227,7 +247,7 @@ def resume_attempt(attempt_id):
 @login_required
 def save_and_exit(attempt_id):
     db = get_db()
-    attempt = _get_owned_attempt(db, attempt_id)
+    attempt = get_owned_attempt(db, attempt_id)
     if attempt["status"] != "in_progress":
         return redirect(url_for("quiz.results", attempt_id=attempt_id))
 
@@ -241,7 +261,7 @@ def save_and_exit(attempt_id):
 @login_required
 def submit_attempt(attempt_id):
     db = get_db()
-    attempt = _get_owned_attempt(db, attempt_id)
+    attempt = get_owned_attempt(db, attempt_id)
 
     if attempt["status"] != "in_progress":
         return redirect(url_for("quiz.results", attempt_id=attempt_id))
@@ -250,7 +270,7 @@ def submit_attempt(attempt_id):
     status = "expired" if elapsed > attempt["duration_seconds"] + 5 else "completed"
 
     _save_answers_from_form(db, attempt_id, request.form)
-    _grade_and_close(db, attempt, status)
+    grade_and_close(db, attempt, status)
     return redirect(url_for("quiz.results", attempt_id=attempt_id))
 
 
@@ -258,7 +278,7 @@ def submit_attempt(attempt_id):
 @login_required
 def results(attempt_id):
     db = get_db()
-    attempt = _get_owned_attempt(db, attempt_id)
+    attempt = get_owned_attempt(db, attempt_id)
 
     if attempt["status"] == "in_progress":
         return redirect(url_for("quiz.view_attempt", attempt_id=attempt_id))
@@ -268,6 +288,12 @@ def results(attempt_id):
         (attempt_id,),
     ).fetchall()
 
+    bookmarked_ids = {
+        r["question_id"] for r in db.execute(
+            "SELECT question_id FROM bookmarks WHERE user_id = ?", (g.user["id"],)
+        ).fetchall()
+    }
+
     items = []
     subject_totals = {}
     for row in answer_rows:
@@ -276,12 +302,14 @@ def results(attempt_id):
         display_options = [q["options"][i] for i in order]
         correct_position = order.index(0)
         items.append({
+            "question_id": row["question_id"],
             "subject": row["subject"],
             "question": q["question"],
             "options": display_options,
             "selected_position": row["selected_position"],
             "correct_position": correct_position,
             "is_correct": row["is_correct"],
+            "is_bookmarked": row["question_id"] in bookmarked_ids,
         })
         st = subject_totals.setdefault(row["subject"], {"total": 0, "correct": 0, "answered": 0})
         st["total"] += 1

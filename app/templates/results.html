@@ -46,15 +46,25 @@
     </tbody>
   </table>
 
-  <a class="btn" href="{{ url_for('dashboard.home') }}">Torna alla dashboard</a>
+  <div class="no-print" style="display:flex; gap:10px; flex-wrap:wrap">
+    <a class="btn" href="{{ url_for('dashboard.home') }}">Torna alla dashboard</a>
+    <button type="button" class="btn btn-ghost" onclick="window.print()">Stampa / Esporta PDF</button>
+  </div>
 </div>
 
 <div class="card">
   <h2>Revisione domande</h2>
   {% for item in items %}
   <div class="review-block {{ 'review-correct' if item.is_correct == 1 else ('review-wrong' if item.selected_position is not none else 'review-blank') }}">
-    <p class="review-subject">{{ item.subject }} &middot; {{ loop.index }}</p>
-    <p class="question-text">{{ item.question }}</p>
+    <div class="question-head">
+      <div>
+        <p class="review-subject">{{ item.subject }} &middot; {{ loop.index }}</p>
+        <p class="question-text">{{ item.question }}</p>
+      </div>
+      <button type="button" class="star-btn no-print {{ 'is-active' if item.is_bookmarked }}" data-question-id="{{ item.question_id }}" title="Preferiti">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2.5l3.09 6.26 6.91.99-5 4.87 1.18 6.88L12 17.77l-6.18 3.23L7 14.12 2 9.25l6.91-.99z"/></svg>
+      </button>
+    </div>
     <div class="options">
       {% for opt in item.options %}
       <div class="option review-option

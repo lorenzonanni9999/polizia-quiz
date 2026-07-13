@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Allenamento per materia{% endblock %}
+{% block title %}Modalità studio{% endblock %}
 {% block content %}
 
 <div class="card">
   <a href="{{ url_for('practice.hub') }}" class="muted">&larr; Modalità di allenamento</a>
-  <h1>Allenamento per materia</h1>
-  <p class="muted">Scegli una singola materia, quante domande vuoi e quanto tempo darti per rispondere.</p>
+  <h1>Modalità studio</h1>
+  <p class="muted">Una domanda alla volta, senza timer: dopo ogni risposta vedi subito se è corretta.</p>
 
-  <form method="post" action="{{ url_for('practice.new_practice') }}" class="practice-form">
+  <form method="post" action="{{ url_for('practice.new_study') }}" class="practice-form">
     <label>Materia
       <select name="subject" id="subject-select">
         {% for s in subjects %}
@@ -21,11 +21,7 @@
     </label>
     <p class="muted" id="available-hint"></p>
 
-    <label>Tempo a disposizione (minuti)
-      <input type="number" name="minutes" min="1" max="240" value="15" required>
-    </label>
-
-    <button type="submit" class="btn btn-primary">Avvia allenamento</button>
+    <button type="submit" class="btn btn-primary">Avvia studio</button>
   </form>
 </div>
 

@@ -18,7 +18,7 @@
   {% if g.user %}
   <nav class="topnav">
     <a href="{{ url_for('dashboard.home') }}">Dashboard</a>
-    <a href="{{ url_for('practice.form') }}">Allenamento</a>
+    <a href="{{ url_for('practice.hub') }}">Allenamento</a>
     <a href="{{ url_for('dashboard.settings') }}">Impostazioni</a>
     {% if g.user['is_admin'] %}
     <a href="{{ url_for('admin.home') }}">Admin</a>
@@ -42,5 +42,6 @@
 
   {% block content %}{% endblock %}
 </main>
+<script src="{{ url_for('static', filename='bookmarks.js') }}" defer></script>
 </body>
 </html>

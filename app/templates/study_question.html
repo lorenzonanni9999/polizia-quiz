@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Modalità studio{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="card-row">
+    <span class="eyebrow" style="margin:0">{{ subject }} &middot; domanda {{ answered + 1 }} di {{ total }}</span>
+    <a href="{{ url_for('dashboard.home') }}" class="muted">Esci</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="post" action="{{ url_for('study.answer', attempt_id=attempt['id']) }}">
+    <input type="hidden" name="position" value="{{ position }}">
+    <div class="question-head">
+      <p class="question-text">{{ question }}</p>
+      <button type="button" class="star-btn {{ 'is-active' if is_bookmarked }}" data-question-id="{{ question_id }}" title="Preferiti">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2.5l3.09 6.26 6.91.99-5 4.87 1.18 6.88L12 17.77l-6.18 3.23L7 14.12 2 9.25l6.91-.99z"/></svg>
+      </button>
+    </div>
+    <div class="options">
+      {% for opt in options %}
+      <label class="option">
+        <input type="radio" name="answer" value="{{ loop.index0 }}" required>
+        <span>{{ opt }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <div class="submit-bar" style="margin-top:20px">
+      <button type="submit" class="btn btn-primary btn-large">Rispondi</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

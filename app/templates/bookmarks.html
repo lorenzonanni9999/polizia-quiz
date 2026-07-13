@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Domande preferite{% endblock %}
+{% block content %}
+
+<div class="card">
+  <a href="{{ url_for('practice.hub') }}" class="muted">&larr; Modalità di allenamento</a>
+  <h1>Domande preferite</h1>
+
+  {% if questions %}
+  <p class="muted">{{ questions|length }} domand{{ 'a' if questions|length == 1 else 'e' }} salvat{{ 'a' if questions|length == 1 else 'e' }}.</p>
+  <form method="post" action="{{ url_for('bookmarks.new_bookmarks_quiz') }}" class="practice-form">
+    <label>Numero di domande
+      <input type="number" name="count" min="1" max="{{ questions|length }}" value="{{ [questions|length, 10] | min }}" required>
+    </label>
+    <label>Tempo a disposizione (minuti)
+      <input type="number" name="minutes" min="1" max="240" value="15" required>
+    </label>
+    <button type="submit" class="btn btn-primary">Avvia allenamento dai preferiti</button>
+  </form>
+  {% else %}
+  <p class="muted">Nessuna domanda preferita ancora. Durante un quiz o un ripasso, premi la stellina accanto a una domanda per salvarla qui.</p>
+  {% endif %}
+</div>
+
+{% if questions %}
+<div class="card">
+  <h2>Elenco</h2>
+  {% for q in questions %}
+  <div class="review-block">
+    <div class="question-head">
+      <div>
+        <p class="review-subject">{{ q.subject }}</p>
+        <p class="question-text">{{ q.question }}</p>
+      </div>
+      <button type="button" class="star-btn is-active" data-question-id="{{ q.id }}" title="Rimuovi dai preferiti">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2.5l3.09 6.26 6.91.99-5 4.87 1.18 6.88L12 17.77l-6.18 3.23L7 14.12 2 9.25l6.91-.99z"/></svg>
+      </button>
+    </div>
+    <div class="options">
+      {% for opt in q.options %}
+      <div class="option review-option {{ 'is-correct' if loop.index0 == q.correct_index }}">
+        <span>{{ opt }}</span>
+        {% if loop.index0 == q.correct_index %}<span class="tag tag-correct">Corretta</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
