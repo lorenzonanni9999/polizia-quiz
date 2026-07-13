@@ -8,7 +8,13 @@
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="{{ url_for('dashboard.home') if g.user else url_for('auth.login') }}">Simulatore Concorso Polizia</a>
+  <a class="brand" href="{{ url_for('dashboard.home') if g.user else url_for('auth.login') }}">
+    <svg class="brand-mark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="color:#cba969">
+      <path d="M24 4 L42 10 V22 C42 34 34 42 24 46 C14 42 6 34 6 22 V10 Z" stroke="currentColor" stroke-width="2.5"/>
+      <path d="M24 15 V31 M16 23 H32" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    Simulatore Concorso Polizia
+  </a>
   {% if g.user %}
   <nav class="topnav">
     <a href="{{ url_for('dashboard.home') }}">Dashboard</a>

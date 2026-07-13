@@ -3,19 +3,35 @@
 {% block content %}
 
 <div class="card">
+  <span class="eyebrow">Esito</span>
   <h1>Risultato simulazione</h1>
-  <p class="score-big">{{ attempt['correct_count'] }} / {{ attempt['total_questions'] }} <span class="muted">({{ pct }}%)</span></p>
-  {% if attempt['mode'] == 'full' %}
-  <p class="official-score">
-    Punteggio ufficiale: <strong>{{ attempt['weighted_score'] }} / {{ max_score }}</strong>
-    <span class="tag {{ 'tag-correct' if is_pass else 'tag-wrong' }}">{{ 'Idoneo' if is_pass else 'Non idoneo' }}</span>
-  </p>
-  <p class="muted">Soglia minima di idoneità: {{ pass_threshold }}/30 &middot; corretta +0,30, errata -0,02, non data 0</p>
-  {% endif %}
-  <p class="muted">
-    Iniziata il {{ attempt['started_at'][:16].replace('T', ' ') }}
-    {% if attempt['status'] == 'expired' %} &middot; tempo scaduto{% endif %}
-  </p>
+
+  <div class="result-hero">
+    <svg class="gauge" width="140" height="140" viewBox="0 0 140 140">
+      <circle class="gauge-track" cx="70" cy="70" r="54"/>
+      <circle class="gauge-fill {{ 'is-pass' if is_pass == True else ('is-fail' if is_pass == False else '') }}"
+              cx="70" cy="70" r="54"
+              stroke-dasharray="{{ gauge_circumference }}"
+              stroke-dashoffset="{{ gauge_offset }}"
+              transform="rotate(-90 70 70)"/>
+      <text x="70" y="66" text-anchor="middle" class="gauge-label">{{ gauge_pct }}%</text>
+      <text x="70" y="84" text-anchor="middle" class="gauge-sublabel">corrette</text>
+    </svg>
+    <div>
+      <p class="score-big">{{ attempt['correct_count'] }} / {{ attempt['total_questions'] }} <span class="muted">({{ pct }}%)</span></p>
+      {% if attempt['mode'] == 'full' %}
+      <p class="official-score">
+        Punteggio ufficiale: <strong>{{ attempt['weighted_score'] }} / {{ max_score }}</strong>
+        <span class="tag {{ 'tag-correct' if is_pass else 'tag-wrong' }}">{{ 'Idoneo' if is_pass else 'Non idoneo' }}</span>
+      </p>
+      <p class="muted">Soglia minima di idoneità: {{ pass_threshold }}/30 &middot; corretta +0,30, errata -0,02, non data 0</p>
+      {% endif %}
+      <p class="muted">
+        Iniziata il {{ attempt['started_at'][:16].replace('T', ' ') }}
+        {% if attempt['status'] == 'expired' %} &middot; tempo scaduto{% endif %}
+      </p>
+    </div>
+  </div>
 
   <table class="table">
     <thead><tr><th>Materia</th><th>Risposte date</th><th>Corrette</th></tr></thead>

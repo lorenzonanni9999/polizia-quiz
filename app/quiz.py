@@ -1,4 +1,5 @@
 import json
+import math
 from datetime import datetime, timezone
 
 from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
@@ -304,12 +305,21 @@ def results(attempt_id):
         max_score = round(attempt["total_questions"] * CORRECT_POINTS, 2)
         is_pass = (attempt["weighted_score"] or 0) >= PASS_THRESHOLD
 
+    # the gauge always mirrors the same "corrette" percentage shown in text,
+    # so the two numbers next to each other never disagree; colour alone
+    # carries the idoneo/non idoneo signal for full simulations
+    gauge_circumference = round(2 * math.pi * 54, 2)
+    gauge_offset = round(gauge_circumference * (1 - pct / 100), 2)
+
     return render_template(
         "results.html",
         attempt=attempt,
         items=items,
         subject_rows=subject_rows,
         pct=pct,
+        gauge_pct=round(pct),
+        gauge_circumference=gauge_circumference,
+        gauge_offset=gauge_offset,
         max_score=max_score,
         is_pass=is_pass,
         pass_threshold=PASS_THRESHOLD,
